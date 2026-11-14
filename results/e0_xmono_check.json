@@ -1,0 +1,24 @@
+{
+ "StudentGrades": {
+  "label_match": 100,
+  "axp_match": 100,
+  "cxp_match": 100,
+  "valid": 100,
+  "out_of_domain": 0,
+  "instances": 100,
+  "avg_n_axp": 1.23,
+  "avg_n_cxp": 2.77,
+  "mismatches": []
+ },
+ "BankruptcyRisk": {
+  "label_match": 36,
+  "axp_match": 39,
+  "cxp_match": 39,
+  "valid": 39,
+  "out_of_domain": 14,
+  "instances": 39,
+  "avg_n_axp": 1.0256410256410255,
+  "avg_n_cxp": 2.0,
+  "mismatches": []
+ }
+}
