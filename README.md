@@ -9,13 +9,41 @@ Source paper: J. Marques-Silva, T. Gerspacher, M. Cooper, A. Ignatiev, N. Narody
 
 ---
 
+## TL;DR
+
+A prediction can often be explained in several different but equally valid ways. The
+paper's algorithms return whichever one the (arbitrary) feature order leads to. We give
+each feature a cost and process **expensive features first**, which steers the algorithm
+to a **cheaper explanation** with the **same number of classifier calls** and the same
+formal guarantees. On 1200 synthetic instances this raises the share of minimum-cost
+explanations from 48% to 89% (AXp) and from 25% to 91% (CXp), and lowers total cost by
+18% (AXp) and 69% (CXp). A small multi-start variant (K = 8 runs) gets 97% / 99%.
+All 1200 explanations passed an independent validity check, and our reimplementation
+reproduces the authors' outputs exactly on all 139 benchmark instances.
+
 ## 1. Background
 
-The paper gives two algorithms (findAXp and findCXp) that compute one formal explanation
-of a prediction made by a fully monotonic classifier, using only black-box calls to the
-classifier (2 calls per feature). An AXp is a subset-minimal set of features that is
-sufficient for the prediction ("why?"), and a CXp is a subset-minimal set of features
-that, if allowed to change, can change the prediction ("why not?").
+**Monotonic classifiers.** A classifier is monotonic if increasing an input feature can
+never lower the predicted class (e.g. in credit scoring, a higher income should never
+make the risk class worse). Many real models are built this way on purpose.
+
+**Formal explanations.** For a prediction `k(v) = c`:
+
+- an **AXp** (abductive explanation, "why?") is a subset-minimal set of features such
+  that, if those features keep their values in `v`, the prediction stays `c` whatever
+  the other features do. Example: "grade A because Quiz = 10 and Exam = 10; homework and
+  project don't matter."
+- a **CXp** (contrastive explanation, "why not?") is a subset-minimal set of features
+  that, if allowed to change, *can* change the prediction. Example: "changing only the
+  Exam mark could change the grade."
+
+Unlike LIME or Anchor, these explanations are guaranteed to be correct.
+
+**The paper's algorithms.** findAXp and findCXp compute one such explanation using only
+black-box calls to the classifier. To test whether a feature can be freed, they evaluate
+the classifier on the lowest and highest corners of the box of allowed inputs; because
+the model is monotonic, if both corners get the same class then every point in between
+does too. So each feature costs just 2 classifier calls.
 
 Both algorithms go through the features one by one and try to drop each feature from the
 explanation. The result is always subset-minimal, but not necessarily the smallest or
@@ -130,6 +158,21 @@ C is cheaper than A on 606 / 1200 instances for AXps (equal on 557, worse on 37,
 p < 1e-90) and on 886 / 1200 for CXps (worse on 42, p < 1e-130). D is cheaper than D'
 on 246 (AXp) and 252 (CXp) instances, and worse on 17 and 12 (p < 1e-35).
 
+How to read this:
+
+- A and B are about the same: with respect to cost, the paper's index order is
+  effectively a random order.
+- C uses exactly as many classifier calls as A (27.8 per AXp on average), so the
+  improvement comes at no extra cost. D adds a few points at 8x the calls.
+- D beats D' with the same number of calls, so the gain comes from the cost information,
+  not just from re-running.
+- CXps gain more than AXps because CXps here are small (1.36 features on average), so
+  the choice is basically "which single feature?", and costs of single features differ a
+  lot. AXps have about 6 features and share many of them, so there is less room to swap.
+- We report % optimal, median gap and total-cost ratio rather than the mean gap, because a
+  few instances where A picks one very expensive feature dominate the mean (CXp mean gap
+  of A is 4.69, median 1.53; see `results/summary.md`).
+
 ![E1](figures/fig1_e1_pct_optimal.png)
 
 ### E2: sensitivity analysis (n = 16, 300 instances)
@@ -184,6 +227,19 @@ benefit grows with the number of explanations, which supports the hypothesis.
 On these small benchmarks most instances have only one AXp, so there is little to gain
 for AXps, but CXps still benefit a lot.
 
+### Verdict on the hypothesis: supported
+
+1. Cost-guided ordering makes explanations substantially cheaper without losing validity
+   (E1, 100% verified).
+2. The gain is exactly zero where the hypothesis says it should be: instances with a
+   single explanation (E4) and equal costs (E2, sigma = 0).
+3. The gain grows with the number of explanations (E4) and with the cost spread (E2).
+4. Using costs the wrong way (ascending) makes things worse, so the ordering is the
+   cause of the effect (E3).
+
+As stated at the start, the method does not guarantee the global minimum: C misses it on
+about 10% of the instances, D on about 1-3%.
+
 ## 6. Discussion and limitations
 
 - Cost-descending order costs nothing extra (same number of classifier calls as the
@@ -201,6 +257,10 @@ for AXps, but CXps still benefit a lot.
   optimistic for the linear family.
 - In the BankruptcyRisk data, 14 of the 39 instances have a feature value of 5 while the
   spec gives the domain [1, 4]. We kept XMono's spec so that E0 compares like with like.
+  (3 instances where the tree's prediction differs from the dataset label are not a
+  problem: we explain the model's prediction, not the true label.)
+- At sigma = 0 a random order gave CXps about 5% cheaper than index order. With equal
+  costs there is no reason to expect this, so it is most likely noise (300 instances).
 - Runtime is negligible for all variants (the classifiers are cheap), so we report
   classifier calls instead.
 - We did not test learned monotonic models (e.g. gradient boosting with monotonic
@@ -227,7 +287,7 @@ analysis/analyze.py   tables (results/summary.md) and figures (figures/)
 tests/                unit tests (paper Tables 1-3, toy examples, exact solver, validity)
 data/xmono/           benchmark data and logs from the XMono repository (GPL-2.0)
 results/              CSV files with one row per instance / variant
-figures/              plots used in the report
+figures/              plots shown in this README
 run_all.py            runs everything
 ```
 
