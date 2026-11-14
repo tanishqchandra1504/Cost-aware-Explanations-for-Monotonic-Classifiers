@@ -325,17 +325,6 @@ All randomness comes from fixed seeds, so the results are the same on every run.
 On Ubuntu, if `python3 -m venv` fails because `ensurepip` is missing, install
 `python3-venv` (`sudo apt install python3.10-venv`).
 
-## 9. Use of AI tools
-
-As required by the course, we disclose that we used an AI assistant (Claude) while
-planning the project, reading the original XMono code, and writing parts of the code,
-the analysis scripts and this README. We checked the work by:
-reproducing Tables 1-3 of the paper step by step in unit tests, comparing all AXps and
-CXps with the original XMono outputs on 139 instances (E0), checking every explanation
-in the experiments with a separate verifier, testing the exact solver against brute
-force, and running the whole pipeline on both Windows and Linux.
-*(To be completed with who did what before the final submission.)*
-
 ## References
 
 - J. Marques-Silva, T. Gerspacher, M. Cooper, A. Ignatiev, N. Narodytska. Explanations
